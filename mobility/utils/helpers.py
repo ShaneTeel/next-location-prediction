@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from datetime import timedelta
-import pyproj
 
 
 def datetime_creator(df, datetime='datetime', departure_time='leaving_datetime'):
@@ -27,8 +26,8 @@ def datetime_creator(df, datetime='datetime', departure_time='leaving_datetime')
     df.drop(columns=[datetime, departure_time], inplace=True)
     return df
 
-def lla_to_ecf(lat, lng, alt):
-    transformer = pyproj.Transformer.from_crs('EPSG:4979', 'EPSG:4978', always_xy=True)
-    x, y, z = transformer.transform(lng, lat, alt)
-    df = pd.DataFrame(data=zip(x, y, z))
-    return df
+# def lla_to_ecf(lat, lng, alt):
+#     transformer = pyproj.Transformer.from_crs('EPSG:4979', 'EPSG:4978', always_xy=True)
+#     x, y, z = transformer.transform(lng, lat, alt)
+#     df = pd.DataFrame(data=zip(x, y, z))
+#     return df

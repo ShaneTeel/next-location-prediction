@@ -2,14 +2,6 @@ numpy>=1.24.0
 pandas>=2.0.0
 geopandas>=0.14.0
 streamlit>=1.28.0
-scikit-mobility
-scikit-learn
-shapely
-imbalanced-learn
-joblib
-geopy
-fastapi
-pydantic
-uvicorn
-streamlit
-streamlit-folium
+folium>=0.15.0
+plotly>=5.17.0
+trackintel>=1.4.2
