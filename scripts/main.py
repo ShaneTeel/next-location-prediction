@@ -4,9 +4,9 @@ logger = get_logger(__name__)
 
 
 def main(data_path):
-    data = DataLoader(data_path=data_path)
-    logger.info("Loaded data sucessfull.")
+    reader = DataLoader(data_path=data_path)
+    data = reader.load_user()
 
 if __name__=="__main__":
     data_path = "./data/002/Trajectory"
-    main()
+    main(data_path)
