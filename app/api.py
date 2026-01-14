@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import uvicorn
 from typing import List, Dict
-from geolife_model import load_geolife_model, cluster_geolife_user, model_pipe, save_model
+from geolife_model import cluster_geolife_user, load_geolife_model, model_pipe, save_model
 
 app = FastAPI()
 

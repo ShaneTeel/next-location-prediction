@@ -1,7 +1,6 @@
 # backend/geolife_model.py
 # Data Handling
 import numpy as np
-import pyproj
 from datetime import datetime as dt, timedelta
 import pandas as pd
 pd.options.mode.copy_on_write = True
@@ -10,14 +9,6 @@ from shapely.geometry import MultiPoint
 import skmob
 import glob
 import os
-
-# Data Visualization
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import seaborn as sns
-import plotly.express as px
-import folium
-from folium.plugins import HeatMap, HeatMapWithTime
 
 # Preprocessing
 from sklearn.model_selection import train_test_split
@@ -113,7 +104,7 @@ def cluster_geolife_user(uid, distance, min_k):
     4. Return 
             - A TrajDataFrame with cluster labels, centroids, and stop points
             - A dictionary with the scores
-    '''   
+    '''
     # Create copy
     tdf = read_single_geolife_user(uid)
     
