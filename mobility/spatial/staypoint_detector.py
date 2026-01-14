@@ -5,14 +5,14 @@ from datetime import timedelta
 
 logger = get_logger(__name__)
 
-class StayPoints:
+class StayPointDetector:
 
     def __init__(self, distance_thresh:int=100, time_thresh:int=30, gap_thresh:int=60):
         self.distance_thresh = distance_thresh
         self.time_thresh = time_thresh
         self.gap_thresh = gap_thresh
 
-        logger.debug("Initialized StayPoints with "
+        logger.debug("Initialized StayPointDetector with "
                      f"distance threshold of {self.distance_thresh} meters "
                      f"time threshold of {self.time_thresh} "
                      f"event gap threshold of {self.gap_thresh}.")
@@ -82,8 +82,8 @@ class StayPoints:
     def _create_staypoint(self, records:pd.DataFrame, duration:float):
         return {
             "user_id": records.iloc[0]["uid"],
-            "started_at": records.iloc[0]["datetime"],
-            "finished_at": records.iloc[-1]["datetime"],
+            "arrived": records.iloc[0]["datetime"],
+            "departed": records.iloc[-1]["datetime"],
             "lat": records["lat"].mean(),
             "lon": records["lon"].mean(),
             "duration": duration,

@@ -1,4 +1,11 @@
 import numpy as np
+from shapely.geometry import MultiPoint
+from geopy.distance import great_circle
+
+def centermost_point(cluster):
+    centroid = (MultiPoint(cluster).centroid.x, MultiPoint(cluster).centroid.y)
+    centermost_point = min(cluster, key=lambda point: great_circle(point, centroid).m)
+    return tuple(centermost_point)
 
 def radius_of_gyration(positions:list, weights:list):
     '''
@@ -58,7 +65,7 @@ def great_circle_distance(pt1:tuple, pt2:tuple):
     '''
     Description
     -----------
-    Implements the haversine formulat to determine the distance between two points in meters.
+    Implements the haversine formula to determine the distance between two points in meters.
 
     Parameters
     ----------
@@ -103,10 +110,3 @@ def center_of_mass(positions:list, weights:list):
     lat_cm = sum(lat * w for (lat, _), w in zip(positions, weights)) / total_weight
     lon_cm = sum(lon * w for (_, lon), w in zip(positions, weights)) / total_weight
     return (lat_cm, lon_cm)
-
-def jump_length():
-
-    pass
-
-def return_frequency():
-    pass

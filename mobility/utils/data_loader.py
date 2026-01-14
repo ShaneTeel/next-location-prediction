@@ -49,6 +49,7 @@ class DataLoader:
         single_users_daily_trajectories = []
 
         if self.cache_file.exists():
+            logger.debug(f"Loading pickle file for user {self.user_id} located at {self.cache_file}.")
             with open(self.cache_file, "rb") as f:
                 return pickle.load(f)
 
