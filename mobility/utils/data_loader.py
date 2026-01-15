@@ -27,7 +27,6 @@ class DataLoader:
         logger.debug(f"DataLoader for GeoLife user {self.user_id} initialized successfully. "
                     f"User {self.user_id} files are located in {self.data_dir}.")
 
-        
     def load_user(self):
         '''
         Description
