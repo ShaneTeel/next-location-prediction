@@ -1,0 +1,180 @@
+import numpy as np
+import pandas as pd
+from typing import Literal
+
+from .markov_chain import MarkovChain
+from mobility.utils import get_logger
+
+logger = get_logger(__name__)
+
+class TimeAwareMarkov:
+    '''
+    Description
+    -----------
+    Class dedicated to computing transition probabilities between states and generating predictions based on the computed probabilities across time steps.
+    Developed specifically for location prediction and movement simulation.
+    '''
+
+    _COLUMN_NAMES = ["datetime", "month", "day", "day_of_week", "hour", "time_of_day"]
+
+    def __init__(self, time_step:Literal["month", "day_of_week", "time_of_day"]="day_of_week", time_gap:int=8, length:int=25, n_sims:int=5):
+        '''
+        Description
+        -----------
+        Class dedicated to computing transition probabilities between states and generating predictions based on the computed probabilities.
+        Developed specifically for location prediction and movement simulation.
+
+        Parameters
+        ----------
+        time_step : Literal["all", "month", "day_of_week", "time_of_day"], default="day_of_week"
+            Mechanism for temporally discretizing the data into specific time periods. 
+            This allows the user to generate probabilities and predictions for each distinct time period contained within the time step.
+        
+        time_gap : int, default=8
+            The maximimum amount of time, in hours, that separate one state from the state immediately following it. 
+            This is used to prevent computing the transition probability of one state to the next if their is a likelhood that the transition is the result of data quality issues.
+            For example, if data collection is sparse on a given day and results in only a single detected staypoint, 
+            computing the transition probability of any state to or from that observed event could result inaccurate results
+
+        length : int, default=25
+            The number of state transitions to predict when calling `.predict()` or `.fit_predict()`
+
+        n_sims : int, default=5
+            The value must be an odd number or a `RuntimeError()` is raised. This number represents the number of simulations that are run when calling `.predict()` or `.fit_predict()`.
+            After all simulations complete, the median value for all simulations at a given index are returned as the final prediction. 
+
+        Raises
+        ------
+        `RuntimeError()`: If argument passed to `n_sims` is NOT an odd integer
+        '''
+        self.time_step = time_step
+        self.time_gap = time_gap
+        self.length = length
+        self.n_sims = n_sims
+        self.models = {}
+        self.predictions = {}
+
+        self._is_fitted = False
+
+        logger.debug("TimeAwareMarkov successfully initialized.")
+
+    def fit_predict(self, locations:pd.Series, datetime:pd.Series, start:int):
+        '''
+        Description
+        -----------
+        Public method chaining the `fit()` and `.predict()` methods together.
+        Calling this method will first compute the probabilities of a known state transition from one state to a subsequent state for step in time_step
+        and then will generate a prediction for each step in time_step based on the computed probabilities for each time_step.
+
+        Parameters
+        ----------
+        locations : pd.Series
+            The semantic labels, ordered by datetime, that will be used to generate the transition probability matrix by 
+            determining the likelihood of transitioning from label at index `i` to label at index `i+1`
+
+        datetime : pd.Series
+            The datetime objects that correspond to each semantic label included in the locations argument. 
+            The method will parse the datetime series into time-series info that will be used in conjuction with the `time_step` argument to generate separate models for each step in time_step.
+
+        start : int, default=None
+            An integer representing the start of the sequence the user wishes to generate. 
+        
+        Returns
+        ------- 
+        predictions : dict[list]
+            A dict of lists containing predicted values with the argument passsed for `start` beginning the sequence
+        '''
+        return self.fit(locations, datetime).predict(start)
+
+    def fit(self, locations:pd.Series, datetime:pd.Series):
+        '''
+        Description
+        -----------
+        Public method for computing the probabilities of known state transitions across each time step specified at initialization.
+
+        Parameters
+        ----------
+        locations : pd.Series
+            The semantic labels, ordered by datetime, that will be used to generate the transition probability matrix by 
+            determining the likelihood of transitioning from label at index `i` to label at index `i+1`
+
+        datetime : pd.Series
+            The datetime objects that correspond to each semantic label included in the locations argument. 
+            The method will parse the datetime series into time-series info that will be used in conjuction with the `time_step` argument to generate separate models for each step in time_step.
+        
+        Returns
+        ------- 
+        self : MarkovChain
+            The model fitted
+        '''
+        time_series = self._parse_datetime(datetime)
+        
+        self.time_states = time_series[self.time_step].unique()
+        masks = [time_series[self.time_step] == state for state in self.time_states]
+
+        for state, mask  in zip(self.time_states, masks):
+            locs = locations[mask].reset_index(drop=True)
+            hours = time_series.loc[mask, "hour"].reset_index(drop=True)
+            if len(locs) >= 2:
+                chain = MarkovChain(self.time_gap, self.length, self.n_sims)
+                self.models[state] = chain.fit(locs, hours)
+            else:
+                self.models[state] = None
+
+        self._is_fitted = True
+
+        return self
+    
+    def predict(self, start:int):
+        '''
+        Description
+        -----------
+        Public method for simulating a series of sequences based on the argument passed for `n_sims` at object initialization and for each step in time step.
+        The final prediction is based on the median of all simulations for a given index.
+
+        Parameters
+        ----------
+        start : int, default=None
+            An integer representing the start of the sequence the user wishes to generate. 
+        
+        Returns
+        ------- 
+        predictions : dict[list]
+            A dict of lists containing predicted values with the argument passsed for `start` beginning the sequence
+        '''
+        self._fit_check()
+
+        for state, model in zip(self.time_states, self.models):
+            model = self.models[state]
+            self.predictions[state] = model.predict(start)
+        
+        return self.predictions
+
+    def _parse_datetime(self, datetime:pd.Series):
+        hour = datetime.dt.hour
+        conditions = [
+        (hour >= 5) & (hour < 12),
+        (hour >= 12) & (hour < 17),
+        (hour >= 17) & (hour < 22)
+        ]
+        options = ['morning', 'afternoon', 'evening']
+        time_of_day = np.select(conditions, options, default='night')
+
+        month = datetime.dt.month
+        day_of_week = datetime.dt.day_of_week
+
+        return pd.DataFrame({
+            "datetime": datetime, 
+            "month": month, 
+            "day_of_week": day_of_week, 
+            "hour": hour, 
+            "time_of_day": time_of_day})
+    
+    def _fit_check(self):
+        '''
+        Description
+        -----------
+        Utility function used to raise a `RuntimeError()` whenever a method is called before `.fit()` or `.fit_predict()`.
+        '''
+        if not self._is_fitted:
+            raise RuntimeError("MarkovChainGenerator must be fitted before performing this operation.")

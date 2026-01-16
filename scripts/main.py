@@ -1,8 +1,7 @@
-from sklearn.model_selection import train_test_split
 
-from mobility.spatial import StayPointDetector, LocationGenerator
-from mobility.training import SMOTENC_OvO_Trainer, MarkovChain
-from mobility.utils import DataLoader, get_logger, setup_logging, datetime_parser, input_generator
+from mobility.profile import StayPointDetector, LocationGenerator
+from mobility.simulate import TimeAwareMarkov
+from mobility.utils import DataLoader, get_logger, setup_logging
 
 
 setup_logging(
@@ -19,19 +18,16 @@ if __name__=="__main__":
     reader = DataLoader(data_path)
     detector = StayPointDetector()
     generator = LocationGenerator()
+    Tchain = TimeAwareMarkov()
     
 
     pfs = reader.load_user()
 
     sps, _ = detector.detect_staypoints(pfs)
     locs = generator.generate_locations(sps)
+    labels = locs["origin_id"]
+    datetime = locs["arrived"]
 
-    data = datetime_parser(locs)
+    predictions = Tchain.fit_predict(labels, datetime, start=0)
 
-    loc_ids = data["origin_id"]
-    chain = MarkovChain(loc_ids)
-
-    diary = chain.generate_sequence(0, 50)
-    logger.info(diary)
-
-    # parsed = datetime_parser(locs)
+    print(predictions)

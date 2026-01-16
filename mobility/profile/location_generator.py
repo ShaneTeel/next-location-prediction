@@ -3,7 +3,8 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import davies_bouldin_score
 
-from mobility.utils import centermost_point, get_logger
+from .measurements import centermost_point
+from mobility.utils import get_logger
 
 logger = get_logger(__name__)
 
