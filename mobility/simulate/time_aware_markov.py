@@ -15,8 +15,6 @@ class TimeAwareMarkov:
     Developed specifically for location prediction and movement simulation.
     '''
 
-    _COLUMN_NAMES = ["datetime", "month", "day", "day_of_week", "hour", "time_of_day"]
-
     def __init__(self, time_step:Literal["month", "day_of_week", "time_of_day"]="day_of_week", time_gap:int=8, length:int=25, n_sims:int=5):
         '''
         Description
@@ -144,9 +142,12 @@ class TimeAwareMarkov:
         '''
         self._fit_check()
 
-        for state, model in zip(self.time_states, self.models):
+        for state, model in self.models.items():
             model = self.models[state]
-            self.predictions[state] = model.predict(start)
+            if model is not None:
+                self.predictions[state] = model.predict(start)
+            else:
+                self.predictions[state] = np.array([])
         
         return self.predictions
 

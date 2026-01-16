@@ -123,8 +123,10 @@ class MarkovChain:
 
             row_sum = trans_mat[i, :].sum()
             if row_sum > 0:
-                trans_mat[i, :] /= row_sum
-                
+                trans_mat[i, :] /= row_sum 
+            else:
+                trans_mat[i, :] = 1.0 / self.state_range
+
         self.matrix = trans_mat
         self._is_fitted = True
         return self
@@ -188,14 +190,16 @@ class MarkovChain:
             A list of predicted values ordered beginning with the argument passsed for `start`
         '''
         sequence = [start]
-
+        current_state = start
         for _ in range(self.length - 1):
-            probas = self.matrix[start, :]
+            probas = self.matrix[current_state, :]
             pred = np.random.choice(
                 self.state_range,
                 p=probas
             )
+            current_state = pred
             sequence.append(pred)
+
         return np.array(sequence, dtype=int)
     
     def _fit_check(self):
