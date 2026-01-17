@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
-from .measurements import great_circle_distance
-from mobility.utils import get_logger
+
+from mobility.utils import get_logger, great_circle_distance
 from datetime import timedelta
 
 logger = get_logger(__name__)

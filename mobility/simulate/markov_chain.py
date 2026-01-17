@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from scipy import stats
+from typing import Literal
 
 from mobility.utils import get_logger
 
@@ -13,7 +15,7 @@ class MarkovChain:
     Developed specifically for location prediction and movement simulation.
     '''
 
-    def __init__(self, time_gap:int=8, length:int=25, n_sims:int=5):
+    def __init__(self, states:pd.Series | np.ndarray, time_gap:int=8, length:int=5, n_sims:int=5):
         '''
         Description
         -----------
@@ -22,13 +24,17 @@ class MarkovChain:
 
         Parameters
         ----------
+        states : np.ndarray
+            An array consistinng of the unique discrete states within the dataset. 
+            Assumes that states are a contingous range of integer values.
+
         time_gap : int, default=8
             The maximimum amount of time, in hours, that separate one state from the state immediately following it. 
             This is used to prevent computing the transition probability of one state to the next if their is a likelhood that the transition is the result of data quality issues.
             For example, if data collection is sparse on a given day and results in only a single detected staypoint, 
             computing the transition probability of any state to or from that observed event could result inaccurate results
 
-        length : int, default=25
+        length : int, default=5
             The number of state transitions to predict when calling `.predict()` or `.fit_predict()`
 
         n_sims : int, default=5
@@ -41,17 +47,17 @@ class MarkovChain:
         '''
         if n_sims % 2 == 0:
             raise RuntimeError(f"Error: Argument passed for `n_sims` must be odd.")
-        
+        self.states = states
+        self.state_range = self.states.max() - self.states.min() + 1
         self.time_gap = time_gap
         self.length = length
         self.n_sims = n_sims 
-        self.states = None
         self.matrices = None
         self._is_fitted = False
 
         logger.debug("MarkovChain successfully initialized.")
 
-    def fit_predict(self, locations:pd.Series, hours:pd.Series, start:int):
+    def fit_predict(self, locations:pd.Series, hours:pd.Series, start:int, method:Literal["median", "mode"]="mode"):
         '''
         Description
         -----------
@@ -72,6 +78,9 @@ class MarkovChain:
 
         start : int, default=None
             An integer representing the start of the sequence the user wishes to generate. 
+        
+        method : Literal["median", "mode"], default="mode"
+            Aggregation method used to determine which prediction is returned from a sequence for a given index.
         
         Returns
         ------- 
@@ -106,8 +115,6 @@ class MarkovChain:
             logger.debug("Error, argument for locations does not include enough states to calculate probability matrix.")
             raise ValueError("Error, argument for locations does not include enough states to calculate probability matrix.")
         
-        states = locations.unique()
-        self.state_range = np.arange(states.min(), states.max()+1).size
         trans_mat = np.zeros((self.state_range, self.state_range), dtype=np.float32)
 
         for i in range(1, len(locations)):
@@ -116,7 +123,7 @@ class MarkovChain:
                 origin = locations[i-1]
                 dest = locations[i]
 
-                if pd.notna(origin) or pd.notna(dest):
+                if pd.notna(origin) and pd.notna(dest):
                     trans_mat[origin, dest] += 1
 
         for i in range(self.state_range):
@@ -131,7 +138,7 @@ class MarkovChain:
         self._is_fitted = True
         return self
 
-    def predict(self, start:int):
+    def predict(self, start:int, method:Literal["median", "mode"]="mode"):
         '''
         Description
         -----------
@@ -142,6 +149,9 @@ class MarkovChain:
         ----------
         start : int, default=None
             An integer representing the start of the sequence the user wishes to generate. 
+        
+        method : Literal["median", "mode"], default="mode"
+            Aggregation method used to determine which prediction is returned from a sequence for a given index.
         
         Returns
         ------- 
@@ -155,9 +165,12 @@ class MarkovChain:
         for i in range(self.n_sims):
             predictions[:, i] = self._generate_sequence(start)
         
-        return np.median(predictions, axis=1)
-        
+        if method == "median":
+            return np.median(predictions, axis=1)
 
+        mode, _ = stats.mode(predictions, axis=1)
+        return mode.astype(int).tolist()
+    
     def get_transition_matrix(self):
         '''
         Description

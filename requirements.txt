@@ -4,9 +4,7 @@ geopandas>=0.14.0
 shapely>=2.1.2
 geopy>=2.4.1
 
-scikit-mobility>=1.2.2
 scikit-learn>=1.8.0
-imbalanced-learn>=0.14.1
 joblib>=1.5.3
 
 fastapi>=0.128.0

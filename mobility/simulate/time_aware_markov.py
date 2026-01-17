@@ -15,7 +15,7 @@ class TimeAwareMarkov:
     Developed specifically for location prediction and movement simulation.
     '''
 
-    def __init__(self, time_step:Literal["month", "day_of_week", "time_of_day"]="day_of_week", time_gap:int=8, length:int=25, n_sims:int=5):
+    def __init__(self, time_step:Literal["month", "day_of_week", "time_of_day"]="day_of_week", time_gap:int=8, length:int=5, n_sims:int=5):
         '''
         Description
         -----------
@@ -34,7 +34,7 @@ class TimeAwareMarkov:
             For example, if data collection is sparse on a given day and results in only a single detected staypoint, 
             computing the transition probability of any state to or from that observed event could result inaccurate results
 
-        length : int, default=25
+        length : int, default=5
             The number of state transitions to predict when calling `.predict()` or `.fit_predict()`
 
         n_sims : int, default=5
@@ -56,7 +56,7 @@ class TimeAwareMarkov:
 
         logger.debug("TimeAwareMarkov successfully initialized.")
 
-    def fit_predict(self, locations:pd.Series, datetime:pd.Series, start:int):
+    def fit_predict(self, locations:pd.Series, datetime:pd.Series, start:int, method:Literal["median", "mode"]="mode"):
         '''
         Description
         -----------
@@ -76,13 +76,16 @@ class TimeAwareMarkov:
 
         start : int, default=None
             An integer representing the start of the sequence the user wishes to generate. 
+            
+        method : Literal["median", "mode"], default="mode"
+            Aggregation method used to determine which prediction is returned from a sequence for a given index.
         
         Returns
         ------- 
         predictions : dict[list]
             A dict of lists containing predicted values with the argument passsed for `start` beginning the sequence
         '''
-        return self.fit(locations, datetime).predict(start)
+        return self.fit(locations, datetime).predict(start, method)
 
     def fit(self, locations:pd.Series, datetime:pd.Series):
         '''
@@ -106,6 +109,7 @@ class TimeAwareMarkov:
             The model fitted
         '''
         time_series = self._parse_datetime(datetime)
+        states = locations.unique()
         
         self.time_states = time_series[self.time_step].unique()
         masks = [time_series[self.time_step] == state for state in self.time_states]
@@ -114,7 +118,7 @@ class TimeAwareMarkov:
             locs = locations[mask].reset_index(drop=True)
             hours = time_series.loc[mask, "hour"].reset_index(drop=True)
             if len(locs) >= 2:
-                chain = MarkovChain(self.time_gap, self.length, self.n_sims)
+                chain = MarkovChain(states, self.time_gap, self.length, self.n_sims)
                 self.models[state] = chain.fit(locs, hours)
             else:
                 self.models[state] = None
@@ -123,7 +127,7 @@ class TimeAwareMarkov:
 
         return self
     
-    def predict(self, start:int):
+    def predict(self, start:int, method:Literal["median", "mode"]="mode"):
         '''
         Description
         -----------
@@ -133,7 +137,10 @@ class TimeAwareMarkov:
         Parameters
         ----------
         start : int, default=None
-            An integer representing the start of the sequence the user wishes to generate. 
+            An integer representing the start of the sequence the user wishes to generate.
+
+        method : Literal["median", "mode"], default="mode"
+            Aggregation method used to determine which prediction is returned from a sequence for a given index.
         
         Returns
         ------- 
@@ -145,9 +152,9 @@ class TimeAwareMarkov:
         for state, model in self.models.items():
             model = self.models[state]
             if model is not None:
-                self.predictions[state] = model.predict(start)
+                self.predictions[state.item()] = model.predict(start, method)
             else:
-                self.predictions[state] = np.array([])
+                self.predictions[state.item()] = np.array([])
         
         return self.predictions
 

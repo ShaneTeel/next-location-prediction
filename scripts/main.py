@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 
 if __name__=="__main__":
 
-    data_path = "./data/002/Trajectory"
+    data_path = "./data/000/Trajectory"
     
     reader = DataLoader(data_path)
     detector = StayPointDetector()

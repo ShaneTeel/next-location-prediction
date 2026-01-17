@@ -3,8 +3,7 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import davies_bouldin_score
 
-from .measurements import centermost_point
-from mobility.utils import get_logger
+from mobility.utils import get_logger, centermost_point
 
 logger = get_logger(__name__)
 
@@ -37,7 +36,7 @@ class LocationGenerator:
 
     def _initialize_model(self, distance, min_k):
         epsilon = distance / self._KM_PER_RADIAN
-        logger.info(f"Initialized DBSCAN with epsilon == {epsilon:6f}")
+        logger.debug(f"Initialized DBSCAN with epsilon == {epsilon:6f}")
         return DBSCAN(eps=epsilon, min_samples=min_k, metric='haversine', algorithm='ball_tree')
 
     def generate_locations(self, stay_points:pd.DataFrame):
